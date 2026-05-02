@@ -97,12 +97,25 @@ function ChatScreen() {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const consumedInitial = React.useRef(false);
+  /**
+   * 새로 보낸 user 메시지의 id — 도착하면 그 메시지를 viewport 상단으로 스크롤.
+   * AI 응답 도착·스트리밍 도중 자동 스크롤은 안 함 (사용자가 질문 위치에서 답변 위에서부터 읽도록).
+   */
+  const pendingScrollIdRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const id = pendingScrollIdRef.current;
+    if (!id || !scrollRef.current) return;
+    const el = scrollRef.current.querySelector(
+      `[data-msg-id="${id}"]`
+    ) as HTMLElement | null;
+    if (el) {
+      // user 메시지를 viewport 상단에 고정 — 그 아래에 AI 답변이 자연스럽게 펼쳐짐
+      el.scrollIntoView({ block: "start", behavior: "smooth" });
+      pendingScrollIdRef.current = null;
     }
-  }, [messages, streaming]);
+    // messages 배열 변경 시마다 실행되지만 id 가 클리어되므로 한 번만 스크롤
+  }, [messages]);
 
   const onPickImage: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
     const file = e.target.files?.[0];
@@ -121,8 +134,9 @@ function ChatScreen() {
       const text = (overrideText ?? input).trim();
       if ((!text && !pendingImage) || streaming) return;
 
+      const userMsgId = "u" + Date.now();
       const userMsg: Msg = {
-        id: "u" + Date.now(),
+        id: userMsgId,
         role: "user",
         text: text || (pendingImage ? "(사진 분석 요청)" : ""),
         time: nowTime(),
@@ -131,6 +145,8 @@ function ChatScreen() {
       const aiMsgId = "a" + Date.now();
       const aiMsg: Msg = { id: aiMsgId, role: "model", text: "", time: nowTime() };
 
+      // 다음 effect 사이클에서 이 user 메시지를 viewport 상단에 고정 (한 번만)
+      pendingScrollIdRef.current = userMsgId;
       setMessages((m) => [...m, userMsg, aiMsg]);
       setInput("");
       setStreaming(true);
@@ -395,7 +411,7 @@ function ChatScreen() {
         {messages.map((m) => (
           <React.Fragment key={m.id}>
             {m.role === "user" ? (
-              <div className="msg-row user">
+              <div className="msg-row user" data-msg-id={m.id}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, maxWidth: "82%" }}>
                   {m.imageDataUrl && (
                     /* eslint-disable-next-line @next/next/no-img-element */
