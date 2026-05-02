@@ -493,7 +493,7 @@ function ChatScreen() {
             onClick={() => fileRef.current?.click()}
             disabled={streaming}
           >
-            {pendingImage ? <IconCheck size={22} color="var(--green-800)" stroke={2.6} /> : <IconPlus size={22} />}
+            {pendingImage ? <IconCheck size={20} color="var(--green-800)" stroke={2.6} /> : <IconPlus size={20} />}
           </button>
           <input
             type="text"
@@ -517,7 +517,7 @@ function ChatScreen() {
             aria-label="보내기"
             disabled={(!input.trim() && !pendingImage) || streaming}
           >
-            <IconSend size={22} />
+            <IconSend size={20} />
           </button>
         </div>
       </div>

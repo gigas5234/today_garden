@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { TopBar } from "@/components/TopBar";
+import { TopBar, HeroLocationPill } from "@/components/TopBar";
 import {
   IconSettings,
   IconLeaf,
@@ -103,9 +103,10 @@ export default function WeatherPage() {
         날씨 <IconLeaf size={28} />
       </h1>
 
-      {/* 풀블리드 hero — field-6.png 가 화면 좌우 끝까지, 텍스트는 하단 좌측 오버레이 */}
+      {/* 풀블리드 hero — field-5.png 가 화면 좌우 끝까지, 텍스트는 하단 좌측 오버레이 */}
       <div className="weather-hero fade-up">
         <div className="hero-photo-bg" />
+        <HeroLocationPill />
         <div className="hero-row">
           <div style={{ flex: 1 }}>
             <div className="h-cap">{cur ? SKY_LABEL[cur.sky] ?? "—" : "—"}</div>
@@ -299,6 +300,7 @@ export default function WeatherPage() {
             onClick={() => setSelectedDay(i)}
           >
             <div className="d-label">{d.label}</div>
+            <div className="d-date">{d.date}</div>
             <div>
               <WeatherIcon kind={d.sky} size={36} />
             </div>

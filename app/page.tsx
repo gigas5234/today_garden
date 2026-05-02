@@ -52,10 +52,71 @@ export default function HourlyPage() {
     }
   }, [snap]);
 
-  const morningGood =
-    hours.slice(0, 4).every((h) => h.status === "best" || h.status === "good");
-  const insightTitle = cur && cur.uv >= 7 ? `${cur.uvLabel} 자외선 시간대 주의` : "오늘은 작업 무난해요";
-  const insightSub = morningGood ? "오전 10시 전후가 작업하기 좋아요" : "시간대별 적합도를 확인하세요";
+  /* ─────── 오늘의 인사이트 (룰 베이스 — AI 호출 아님) ─────── */
+  // 가장 적합도 높은 연속 시간대 찾기
+  const bestRun = (() => {
+    let bestStart = -1, bestEnd = -1, bestLen = 0;
+    let curStart = -1;
+    hours.forEach((h, i) => {
+      const ok = h.status === "best" || h.status === "good";
+      if (ok) {
+        if (curStart < 0) curStart = i;
+        const len = i - curStart + 1;
+        if (len > bestLen) {
+          bestLen = len;
+          bestStart = curStart;
+          bestEnd = i;
+        }
+      } else {
+        curStart = -1;
+      }
+    });
+    return bestLen >= 1 ? { start: hours[bestStart].time, end: hours[bestEnd].time, len: bestLen } : null;
+  })();
+
+  // 위험 사유: warn 슬롯이 시작되는 첫 시간 + 사유
+  const firstWarn = hours.find((h) => h.status === "warn");
+  const reasonWarns = snap?.score.work.reasons.filter((r) => r.status !== "ok") ?? [];
+
+  // 첫 비/눈 슬롯
+  const firstWet = hours.find((h) => h.sky === "rain" || h.sky === "snow" || h.sky === "sleet" || h.rain >= 60);
+
+  // 메인 타이틀: 가장 두드러진 위험 또는 적기
+  const insightTitle = (() => {
+    if (cur && cur.feelsLike >= 33) return "오늘 더위 위험 — 한낮 작업 피하세요";
+    if (cur && cur.feelsLike <= 0) return "한파 — 보온 필수";
+    if (firstWet) return `${firstWet.time}부터 ${firstWet.sky === "snow" ? "눈" : firstWet.sky === "sleet" ? "비/눈" : "비"} 가능`;
+    if (cur && cur.windSpeed >= 8) return "바람 강함 — 방제 작업 비추천";
+    if (cur && cur.uv >= 9) return "자외선 매우 높음 — 한낮 야외 작업 피하세요";
+    if (cur && cur.uv >= 7) return `자외선 ${cur.uvLabel} — 모자·토시 권장`;
+    if (cur && cur.pm10 != null && cur.pm10 > 150) return "미세먼지 나쁨 — 마스크 필수";
+    if (bestRun && bestRun.len >= 3) return `${bestRun.start} ~ ${bestRun.end} 작업 적기`;
+    return "오늘은 작업 무난해요";
+  })();
+
+  // 보조 라인: 대안 권고
+  const insightSub = (() => {
+    if (cur && cur.feelsLike >= 33) {
+      const cool = hours.find((h) => h.status === "best" || h.status === "good");
+      return cool ? `${cool.time}대 시원할 때 작업` : "이른 아침·저녁만 권장";
+    }
+    if (firstWet) return "방제·관수는 비 오기 전에 마무리";
+    if (cur && cur.uv >= 7 && bestRun) return `자외선 약한 ${bestRun.start} 전후 추천`;
+    if (cur && cur.windSpeed >= 6) return "살포 작업은 풍속 5m/s 이하에서";
+    if (reasonWarns.length > 0) return reasonWarns[0].note;
+    if (bestRun) return `${bestRun.start} ~ ${bestRun.end}, 약 ${bestRun.len * 3}시간 적기`;
+    return "시간대별 적합도를 확인하세요";
+  })();
+
+  // 부가 한 줄: 풍속/체감/PM10 중 가장 의미 있는 정보
+  const insightExtra = (() => {
+    if (!cur) return null;
+    if (firstWarn && !firstWet) return `${firstWarn.time}부터 적합도 떨어져요`;
+    if (cur.humidity >= 85) return `습도 ${cur.humidity}% — 병해 발생 주의`;
+    if (cur.windSpeed <= 3 && cur.pop <= 20) return "바람 약함 + 비 없음 → 방제 적기";
+    if (cur.pm10 != null && cur.pm10 <= 50) return `미세먼지 ${cur.pm10}㎍ — 환기 좋음`;
+    return null;
+  })();
 
   return (
     <div className="screen-anim">
@@ -289,7 +350,10 @@ export default function HourlyPage() {
             </span>
           </div>
         </div>
-        <div className="suit-bar">
+        <div
+          className="suit-bar"
+          style={{ gridTemplateColumns: `repeat(${segs.length}, 1fr)` }}
+        >
           {segs.map((s, i) => (
             <div
               key={i}
@@ -299,7 +363,7 @@ export default function HourlyPage() {
           ))}
         </div>
         <div className="suit-arrow">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", height: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${segs.length}, 1fr)`, height: 8 }}>
             {segs.map((_, i) => (
               <div key={i} style={{ position: "relative" }}>
                 {i === nowIdx && (
@@ -321,7 +385,10 @@ export default function HourlyPage() {
             ))}
           </div>
         </div>
-        <div className="suit-labels" style={{ marginTop: 6 }}>
+        <div
+          className="suit-labels"
+          style={{ marginTop: 6, gridTemplateColumns: `repeat(${hours.length}, 1fr)` }}
+        >
           {hours.map((h, i) => (
             <span key={i} className={h.isNow ? "now" : ""}>
               {h.time}
@@ -338,6 +405,14 @@ export default function HourlyPage() {
           <div className="i-cap">오늘의 인사이트</div>
           <div className="i-title">{insightTitle}</div>
           <div className="i-sub">{insightSub}</div>
+          {insightExtra && (
+            <div
+              className="i-sub"
+              style={{ marginTop: 4, color: "var(--green-700)", fontWeight: 600 }}
+            >
+              · {insightExtra}
+            </div>
+          )}
         </div>
       </div>
     </div>

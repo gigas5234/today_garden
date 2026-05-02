@@ -33,8 +33,13 @@ function ymd(d: Date) {
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
 }
 
-/** 단기예보용 base_date / base_time (직전 발표 시각). */
-export function vilageBase(now = new Date()): { base_date: string; base_time: string } {
+function kstNow(): Date {
+  const n = new Date();
+  return new Date(n.getTime() + n.getTimezoneOffset() * 60_000 + 9 * 3_600_000);
+}
+
+/** 단기예보용 base_date / base_time (직전 발표 시각, KST 기준). */
+export function vilageBase(now = kstNow()): { base_date: string; base_time: string } {
   const d = new Date(now);
   // 발표는 HH:10. 안전 마진 20분 빼서 HH:30 이전엔 직전 슬롯 사용.
   if (d.getMinutes() < 30) d.setHours(d.getHours() - 1);
@@ -54,8 +59,8 @@ export function vilageBase(now = new Date()): { base_date: string; base_time: st
   return { base_date: ymd(d), base_time: `${pad(pick)}00` };
 }
 
-/** 초단기실황용 base_date / base_time (직전 정시). */
-export function ncstBase(now = new Date()): { base_date: string; base_time: string } {
+/** 초단기실황용 base_date / base_time (직전 정시, KST 기준). */
+export function ncstBase(now = kstNow()): { base_date: string; base_time: string } {
   const d = new Date(now);
   if (d.getMinutes() < 40) d.setHours(d.getHours() - 1);
   return { base_date: ymd(d), base_time: `${pad(d.getHours())}00` };

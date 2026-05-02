@@ -29,7 +29,8 @@ export type HourSlot = {
 };
 
 export type DaySlot = {
-  label: string;
+  label: string;     // "오늘" | "내일" | "월"·"화" 등
+  date: string;      // "5/4" 표기용
   hi: number;
   lo: number;
   rain: number;
@@ -63,7 +64,8 @@ export type WeatherSnapshot = {
   meta: { generatedAt: number };
 };
 
-const HOUR_SLOTS = [6, 9, 12, 15, 18, 21, 0];
+// 오늘의 시간 슬롯. 0시 시작, 3시간 간격으로 21시까지. 자정 직후엔 0시 슬롯이 isNow.
+const HOUR_SLOTS = [0, 3, 6, 9, 12, 15, 18, 21];
 
 function pad(n: number) {
   return n.toString().padStart(2, "0");
@@ -139,8 +141,18 @@ function dayLabel(d: Date, base: Date): string {
   return ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
 }
 
-export async function buildSnapshot(farm: Farm): Promise<WeatherSnapshot> {
+/**
+ * 서버 환경(UTC) 이든 한국 PC(KST) 든 항상 KST 시각의 Date 를 반환.
+ * `.getHours()`, `.getDate()`, `.getMonth()` 등 호출 시 KST 값이 나오도록 보정.
+ */
+function kstNow(): Date {
   const now = new Date();
+  // 로컬 → UTC 보정 + KST(+9h) 추가
+  return new Date(now.getTime() + now.getTimezoneOffset() * 60_000 + 9 * 3_600_000);
+}
+
+export async function buildSnapshot(farm: Farm): Promise<WeatherSnapshot> {
+  const now = kstNow();
   const [fcstItems, ncstItems, sun, air] = await Promise.all([
     fetchVilageFcst(farm.nx, farm.ny),
     fetchUltraSrtNcst(farm.nx, farm.ny),
@@ -184,14 +196,11 @@ export async function buildSnapshot(farm: Farm): Promise<WeatherSnapshot> {
 
   const { uv, label: uvLabel } = estimateUV(now);
 
-  // hourly 7개 (06,09,12,15,18,21,24)
+  // hourly 8개 (00,03,06,09,12,15,18,21) — 모두 오늘 시간
   const today = ymd(now);
-  const tomorrow = ymd(new Date(now.getTime() + 86400000));
   const hourly: HourSlot[] = HOUR_SLOTS.map((h) => {
-    const useTomorrow = h === 0;
-    const date = useTomorrow ? tomorrow : today;
-    const time = `${pad(useTomorrow ? 24 : h)}00`;
-    const key = `${date}-${time === "2400" ? "0000" : time}`;
+    const time = `${pad(h)}00`;
+    const key = `${today}-${time}`;
     const cats = fcst.get(key);
     const t = Number(cats?.get("TMP") ?? curTemp);
     const r = Number(cats?.get("POP") ?? 10);
@@ -206,7 +215,7 @@ export async function buildSnapshot(farm: Farm): Promise<WeatherSnapshot> {
       hour: h,
     });
     return {
-      time: `${pad(h === 0 ? 24 : h)}시`,
+      time: `${pad(h)}시`,
       temp: Math.round(t),
       rain: Math.round(r),
       sky: skyOf(sk, pt, h),
@@ -215,10 +224,10 @@ export async function buildSnapshot(farm: Farm): Promise<WeatherSnapshot> {
     };
   });
 
-  // 가장 가까운 시점에 isNow 부착
+  // 가장 가까운 슬롯에 isNow 부착 — 모두 오늘이라 단순 절대값 거리
   const nowH = now.getHours();
   let nowIdx = 0;
-  let smallestDiff = 24;
+  let smallestDiff = 25;
   hourly.forEach((s, i) => {
     const slotH = parseInt(s.time);
     const diff = Math.abs(slotH - nowH);
@@ -265,6 +274,7 @@ export async function buildSnapshot(farm: Farm): Promise<WeatherSnapshot> {
     const a = dayMap.get(d)!;
     daily.push({
       label: dayLabel(dt, todayStart),
+      date: `${dt.getMonth() + 1}/${dt.getDate()}`,
       hi: a.hi ?? Math.round(curTemp + 2),
       lo: a.lo ?? Math.round(curTemp - 6),
       rain: a.pop,
