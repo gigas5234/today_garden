@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { TopBar } from "@/components/TopBar";
 import { useLocation } from "@/components/LocationContext";
 import { useWeather } from "@/components/useWeather";
+import { AnswerView, AnswerParseError } from "@/components/chat/AnswerView";
+import { type AiAnswer, parseAnswer } from "@/lib/ai/types";
 
 import {
   IconSettings,
@@ -22,6 +24,9 @@ type Msg = {
   text: string;
   time: string;
   imageDataUrl?: string;   // user 가 첨부한 사진 (data:image/...;base64,)
+  /** model 메시지에 한해, 스트림 종료 후 파싱된 구조화 응답 */
+  parsedAnswer?: AiAnswer;
+  parseError?: boolean;
 };
 
 type LastPrompt = {
@@ -80,6 +85,7 @@ function ChatScreen() {
   } | null>(null);
   const [lastPrompt, setLastPrompt] = React.useState<LastPrompt>(null);
   const [showPrompt, setShowPrompt] = React.useState(false);
+  const [pillsOpen, setPillsOpen] = React.useState(false);
 
   const localPills = React.useMemo(() => {
     if (!snap) return [];
@@ -130,12 +136,18 @@ function ChatScreen() {
       setStreaming(true);
       setError(null);
 
+      // 과거 model 메시지는 raw JSON 대신 summary 만 보내서 컨텍스트 압축
       const history: Array<{
         role: "user" | "model";
         text: string;
         imageBase64?: string;
         imageMime?: string;
-      }> = [...messages, userMsg].map((m) => ({ role: m.role, text: m.text }));
+      }> = [...messages, userMsg].map((m) => {
+        if (m.role === "model" && m.parsedAnswer?.summary) {
+          return { role: "model", text: m.parsedAnswer.summary };
+        }
+        return { role: m.role, text: m.text };
+      });
       // 이미지는 마지막 user 메시지에만 부착
       if (pendingImage) {
         const last = history[history.length - 1];
@@ -202,6 +214,16 @@ function ChatScreen() {
         setError(String((e as Error).message ?? e));
       } finally {
         setStreaming(false);
+        // 스트림 종료 — 누적된 raw 텍스트를 JSON 으로 파싱해 구조화 답변 부착
+        setMessages((m) =>
+          m.map((x) => {
+            if (x.id !== aiMsgId) return x;
+            const parsed = parseAnswer(x.text);
+            return parsed
+              ? { ...x, parsedAnswer: parsed, parseError: false }
+              : { ...x, parseError: !!x.text };
+          })
+        );
       }
     },
     [input, pendingImage, farm.lat, farm.lon, messages, streaming]
@@ -225,54 +247,61 @@ function ChatScreen() {
         }
       />
 
-      <h1 className="page-title">
-        AI 상담 <IconLeaf size={28} />
+      <h1 className="page-title compact">
+        AI 상담 <IconLeaf size={20} />
       </h1>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: 13,
-          color: "var(--ink-500)",
-          fontWeight: 600,
-          marginBottom: 8,
-        }}
+      {/* 현재 참고 중 — 접힘/펼침 토글, 디폴트 닫힘 */}
+      <button
+        type="button"
+        onClick={() => setPillsOpen((v) => !v)}
+        className="ctx-toggle"
+        aria-expanded={pillsOpen}
       >
         <IconSparkle size={14} color="#3A7C58" />
         <span>현재 참고 중</span>
-        {lastPrompt && (
-          <button
-            onClick={() => setShowPrompt((v) => !v)}
-            style={{
-              marginLeft: "auto",
-              fontSize: 11,
-              fontWeight: 700,
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: showPrompt ? "var(--green-800)" : "var(--bg-soft)",
-              color: showPrompt ? "white" : "var(--ink-700)",
-              border: "1px solid var(--line)",
-            }}
-          >
-            {showPrompt ? "프롬프트 닫기" : "전송된 프롬프트 보기"}
-          </button>
-        )}
-      </div>
-      <div className="pill-row">
-        {pills.length > 0 ? (
-          pills.map((p) => (
-            <span key={p} className="ctx-pill">
-              {p}
-            </span>
-          ))
-        ) : (
-          <span className="ctx-pill" style={{ color: "var(--ink-400)" }}>
-            #날씨_불러오는중
-          </span>
-        )}
-      </div>
+        <span className="ctx-toggle-count">
+          {pills.length > 0 ? `${pills.length}개` : "수집 중"}
+        </span>
+        <span className={"ctx-toggle-chev" + (pillsOpen ? " open" : "")} aria-hidden>
+          ▾
+        </span>
+      </button>
+      {pillsOpen && (
+        <>
+          <div className="pill-row" style={{ marginTop: 6 }}>
+            {pills.length > 0 ? (
+              pills.map((p) => (
+                <span key={p} className="ctx-pill">
+                  {p}
+                </span>
+              ))
+            ) : (
+              <span className="ctx-pill" style={{ color: "var(--ink-400)" }}>
+                #날씨_불러오는중
+              </span>
+            )}
+          </div>
+          {lastPrompt && (
+            <button
+              onClick={() => setShowPrompt((v) => !v)}
+              style={{
+                marginTop: 8,
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "4px 10px",
+                borderRadius: 999,
+                background: showPrompt ? "var(--green-800)" : "var(--bg-soft)",
+                color: showPrompt ? "white" : "var(--ink-700)",
+                border: "1px solid var(--line)",
+                alignSelf: "flex-start",
+              }}
+            >
+              {showPrompt ? "프롬프트 닫기" : "전송된 프롬프트 보기"}
+            </button>
+          )}
+        </>
+      )}
 
       {/* 전송된 프롬프트 디버그 패널 */}
       {showPrompt && lastPrompt && (
@@ -391,18 +420,26 @@ function ChatScreen() {
                 <div className="ai-avatar">
                   <IconBot size={22} />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: "82%" }}>
-                  <div className="bubble ai" style={!m.text ? { padding: 0 } : undefined}>
-                    {m.text ? (
-                      m.text.split("\n").map((l, i) => <div key={i}>{l || " "}</div>)
-                    ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: "92%", flex: 1 }}>
+                  {/* 1) 스트리밍 중 또는 응답 시작 전 → 타이핑 점 */}
+                  {!m.parsedAnswer && !m.parseError && (
+                    <div className="bubble ai" style={{ padding: 0 }}>
                       <div className="typing">
                         <span />
                         <span />
                         <span />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                  {/* 2) JSON 파싱 성공 → 구조화 카드 */}
+                  {m.parsedAnswer && (
+                    <AnswerView
+                      answer={m.parsedAnswer}
+                      onQuickReply={(text) => send(text)}
+                    />
+                  )}
+                  {/* 3) JSON 파싱 실패 → 원문 fallback */}
+                  {m.parseError && <AnswerParseError raw={m.text} />}
                   <div className="timestamp">{m.time}</div>
                 </div>
               </div>

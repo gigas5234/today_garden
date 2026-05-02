@@ -9,7 +9,7 @@ import { latLonToGrid } from "./kma/grid";
 
 export const FARM = {
   id: "main",
-  name: "삼방리 밭",
+  name: "삼방리",
   lat: 37.5093,
   lon: 127.5101,
   sido: "경기",

@@ -20,6 +20,7 @@ import {
 } from "@/components/icons";
 import { useLocation } from "@/components/LocationContext";
 import { useWeather } from "@/components/useWeather";
+import { TaskBottomSheet } from "@/components/tasks/TaskBottomSheet";
 import type { Task as RepoTask, Crop } from "@/lib/store/repo";
 
 type Priority = "high" | "mid" | "low";
@@ -45,6 +46,7 @@ export default function TasksPage() {
   const [crops, setCrops] = React.useState<Map<string, Crop>>(new Map());
   const [loading, setLoading] = React.useState(true);
   const [confetti, setConfetti] = React.useState<string | null>(null);
+  const [sheetTask, setSheetTask] = React.useState<RepoTask | null>(null);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -66,25 +68,34 @@ export default function TasksPage() {
   const todoCount = tasks.filter((t) => !t.done_at).length;
   const doneCount = tasks.filter((t) => t.done_at).length;
 
-  const toggle = async (id: string) => {
-    const t = tasks.find((x) => x.id === id);
-    if (!t) return;
+  /** 체크박스 토글 — 빠른 완료 처리 (확장 액션 시트 안 거치고). */
+  const quickComplete = async (e: React.MouseEvent, t: RepoTask) => {
+    e.stopPropagation();
     const willDone = !t.done_at;
     if (willDone) {
-      setConfetti(id);
+      setConfetti(t.id);
       setTimeout(() => setConfetti(null), 700);
     }
-    // 낙관적 업데이트
     setTasks((prev) =>
       prev.map((x) =>
-        x.id === id ? { ...x, done_at: willDone ? new Date().toISOString() : null } : x
+        x.id === t.id ? { ...x, done_at: willDone ? new Date().toISOString() : null } : x
       )
     );
-    await fetch(`/api/tasks/${id}`, {
+    await fetch(`/api/tasks/${t.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ done: willDone }),
+      body: JSON.stringify(
+        willDone
+          ? { action: "complete", result_status: "normal" }
+          : { action: "toggle", done: false }
+      ),
     });
+    if (willDone) reload();
+  };
+
+  const openSheet = (t: RepoTask) => {
+    if (t.done_at) return; // 완료된 task 는 시트 안 열음
+    setSheetTask(t);
   };
 
   const goAI = () => {
@@ -156,11 +167,13 @@ export default function TasksPage() {
             <div
               key={t.id}
               className={"task-row fade-up" + (done ? " done" : "")}
-              style={{ animationDelay: `${i * 60}ms` }}
+              style={{ animationDelay: `${i * 60}ms`, cursor: done ? "default" : "pointer" }}
+              onClick={() => openSheet(t)}
+              role={done ? undefined : "button"}
             >
               <button
                 className={"checkbox" + (done ? " checked" : "")}
-                onClick={() => toggle(t.id)}
+                onClick={(e) => quickComplete(e, t)}
                 aria-label={done ? "완료 취소" : "완료"}
               >
                 {done && <IconCheck size={18} stroke={3.5} />}
@@ -244,6 +257,15 @@ export default function TasksPage() {
           );
         })}
       </div>
+
+      <TaskBottomSheet
+        task={sheetTask}
+        cropName={
+          sheetTask?.crop_id ? crops.get(sheetTask.crop_id)?.name : undefined
+        }
+        onClose={() => setSheetTask(null)}
+        onChanged={reload}
+      />
 
       <div
         style={{

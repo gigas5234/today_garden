@@ -92,8 +92,5 @@ on conflict (id) do nothing;
 -- lib/farms.ts 와 동일한 좌표/격자.
 insert into farms (slug, name, lat, lon, kma_nx, kma_ny, air_sido, is_default)
 values
-  ('ypg',  '양평 밭',   37.4914, 127.4874, 69, 125, '경기', true),
-  ('gpg',  '가평 텃밭', 37.8316, 127.5095, 70, 130, '경기', false),
-  ('yj',   '여주 농장', 37.2980, 127.6371, 72, 121, '경기', false),
-  ('home', '집 마당',   37.5547, 126.9707, 60, 127, '서울', false)
+  ('main', '삼방리',   37.5093, 127.5101, 70, 126, '경기', true)
 on conflict (slug) do nothing;

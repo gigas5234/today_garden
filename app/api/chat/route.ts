@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { DEFAULT_FARM, farmAt } from "@/lib/farms";
-import { buildChatContext } from "@/lib/gemini/context";
+import { buildChatContext, buildImageNotice } from "@/lib/gemini/context";
 import { GEMINI_ENABLED, GEMINI_MODEL, SYSTEM_INSTRUCTION, getGemini } from "@/lib/gemini/client";
 
 export const runtime = "nodejs";
 
 type IncomingMsg = {
   role: "user" | "model";
+  /** user 일 땐 사용자 입력. model 일 땐 (가능하면) 과거 답변의 summary 만 보냄 */
   text: string;
   /** base64 — without data: prefix */
   imageBase64?: string;
@@ -52,8 +53,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 마지막 사용자 메시지에 [현재 상황] 컨텍스트 prepend
-  const userPromptText = `${ctx.text}\n[질문] ${lastUser.text}`;
+  // 마지막 사용자 메시지에 컨텍스트 + (이미지 안내) prepend
+  const hasImage = !!(lastUser.imageBase64 && lastUser.imageMime);
+  const imageNotice = buildImageNotice(hasImage);
+  const userPromptText = `${ctx.text}\n${imageNotice}[질문] ${lastUser.text}`;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -105,7 +108,9 @@ export async function POST(req: NextRequest) {
           config: {
             systemInstruction: SYSTEM_INSTRUCTION,
             temperature: 0.6,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
+            // 새 시스템 인스트럭션이 JSON 응답을 강제 — 모델 측에서도 JSON 모드로 보장
+            responseMimeType: "application/json",
           },
         });
 

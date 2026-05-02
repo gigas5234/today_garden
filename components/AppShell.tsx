@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LocationProvider } from "./LocationContext";
+import { ToastProvider } from "./Toast";
 import {
   IconCloudSun,
   IconClock,
@@ -62,12 +63,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAI = pathname.startsWith("/chat");
   return (
     <LocationProvider>
-      <div className="app-shell">
-        <div className={"screen" + (isAI ? " screen-ai-mode" : "")} key={pathname}>
-          {children}
+      <ToastProvider>
+        <div className="app-shell">
+          <div className={"screen" + (isAI ? " screen-ai-mode" : "")} key={pathname}>
+            {children}
+          </div>
+          <TabBar />
         </div>
-        <TabBar />
-      </div>
+      </ToastProvider>
     </LocationProvider>
   );
 }
