@@ -21,6 +21,7 @@ import {
 import { useLocation } from "@/components/LocationContext";
 import { useWeather } from "@/components/useWeather";
 import { TaskBottomSheet } from "@/components/tasks/TaskBottomSheet";
+import { useToast } from "@/components/Toast";
 import type { Task as RepoTask, Crop } from "@/lib/store/repo";
 
 type Priority = "high" | "mid" | "low";
@@ -38,6 +39,7 @@ function timeLabel(t: RepoTask): string {
 
 export default function TasksPage() {
   const router = useRouter();
+  const toast = useToast();
   const { farm } = useLocation();
   const { snap } = useWeather(farm.lat, farm.lon);
   const cur = snap?.current;
@@ -76,21 +78,30 @@ export default function TasksPage() {
       setConfetti(t.id);
       setTimeout(() => setConfetti(null), 700);
     }
+    // 낙관적 업데이트
     setTasks((prev) =>
       prev.map((x) =>
         x.id === t.id ? { ...x, done_at: willDone ? new Date().toISOString() : null } : x
       )
     );
-    await fetch(`/api/tasks/${t.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(
-        willDone
-          ? { action: "complete", result_status: "normal" }
-          : { action: "toggle", done: false }
-      ),
-    });
-    if (willDone) reload();
+    try {
+      const res = await fetch(`/api/tasks/${t.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(
+          willDone
+            ? { action: "complete", result_status: "normal" }
+            : { action: "toggle", done: false }
+        ),
+      });
+      if (!res.ok) throw new Error(`http ${res.status}`);
+      if (willDone) toast.show("기록으로 저장됨", "success");
+    } catch {
+      toast.show("저장 실패 — 다시 시도해 주세요", "warn");
+    } finally {
+      // 성공·실패 무관하게 서버 상태 동기화 (followup 추가/실패 둘 다 반영)
+      reload();
+    }
   };
 
   const openSheet = (t: RepoTask) => {
@@ -170,6 +181,14 @@ export default function TasksPage() {
               style={{ animationDelay: `${i * 60}ms`, cursor: done ? "default" : "pointer" }}
               onClick={() => openSheet(t)}
               role={done ? undefined : "button"}
+              tabIndex={done ? -1 : 0}
+              onKeyDown={(ev) => {
+                if (done) return;
+                if (ev.key === "Enter" || ev.key === " ") {
+                  ev.preventDefault();
+                  openSheet(t);
+                }
+              }}
             >
               <button
                 className={"checkbox" + (done ? " checked" : "")}

@@ -169,15 +169,16 @@ export async function toggleTask(id: string, done: boolean): Promise<void> {
   const updates: Record<string, unknown> = {
     done_at: done ? new Date().toISOString() : null,
   };
-  // status 컬럼이 있으면 같이 업데이트 (0002 마이그레이션 후). 없으면 silently 무시되도록 try
-  try {
-    await sb.from("tasks").update({ ...updates, status: done ? "done" : "pending" }).eq("id", id);
-    return;
-  } catch {
-    /* fallback */
+  // status 컬럼이 있으면 같이 업데이트 (0002 마이그레이션 후). 없으면 fallback.
+  const full = await sb
+    .from("tasks")
+    .update({ ...updates, status: done ? "done" : "pending" })
+    .eq("id", id);
+  if (full.error) {
+    console.warn("[toggleTask] full update failed, falling back:", full.error.message);
+    const minimal = await sb.from("tasks").update(updates).eq("id", id);
+    if (minimal.error) throw minimal.error;
   }
-  const { error } = await sb.from("tasks").update(updates).eq("id", id);
-  if (error) throw error;
 }
 
 /** 할 일 영구 삭제. */
@@ -244,37 +245,37 @@ export async function completeTask(
     return { task: t, log };
   }
 
-  // Supabase 모드 — 신규 컬럼이 없을 수 있으므로 단계적으로 시도
+  // Supabase 는 throw 안 하고 { data, error } 반환 — error 필드 검사로 fallback
   let updatedTask: Task | null = null;
-  try {
-    const { data } = await sb
-      .from("tasks")
-      .update({
-        done_at: nowIso,
-        status: input.result_status === "partial" ? "partial" : "done",
-        result_status: input.result_status,
-        memo: input.memo ?? null,
-      })
-      .eq("id", input.task_id)
-      .select()
-      .single();
-    updatedTask = data as Task;
-  } catch {
-    // 신규 컬럼 미존재 — done_at 만 업데이트
-    const { data } = await sb
+  const fullUpdate = await sb
+    .from("tasks")
+    .update({
+      done_at: nowIso,
+      status: input.result_status === "partial" ? "partial" : "done",
+      result_status: input.result_status,
+      memo: input.memo ?? null,
+    })
+    .eq("id", input.task_id)
+    .select()
+    .single();
+  if (fullUpdate.error) {
+    console.warn("[completeTask] full update failed, falling back to done_at only:", fullUpdate.error.message);
+    const minimal = await sb
       .from("tasks")
       .update({ done_at: nowIso })
       .eq("id", input.task_id)
       .select()
       .single();
-    updatedTask = data as Task;
+    updatedTask = minimal.data as Task | null;
+  } else {
+    updatedTask = fullUpdate.data as Task;
   }
 
   let logRow: WorkLog | null = null;
   if (updatedTask) {
-    try {
-      const farmRow = await resolveFarmRowId("main");
-      const { data } = await sb
+    const farmRow = await resolveFarmRowId("main");
+    if (farmRow) {
+      const logResult = await sb
         .from("work_logs")
         .insert({
           task_id: updatedTask.id,
@@ -288,9 +289,11 @@ export async function completeTask(
         })
         .select()
         .single();
-      logRow = data as WorkLog;
-    } catch {
-      /* work_logs 테이블 미생성 — 무시 */
+      if (logResult.error) {
+        console.warn("[completeTask] work_logs insert failed:", logResult.error.message);
+      } else {
+        logRow = logResult.data as WorkLog;
+      }
     }
   }
 
@@ -311,27 +314,27 @@ export async function snoozeTask(input: SnoozeTaskInput): Promise<Task | null> {
     if (input.reason) t.snooze_reason = input.reason;
     return t;
   }
-  try {
-    const { data } = await sb
-      .from("tasks")
-      .update({
-        due_at: input.due_at,
-        status: "snoozed",
-        snooze_reason: input.reason ?? null,
-      })
-      .eq("id", input.task_id)
-      .select()
-      .single();
-    return data ? { ...(data as Task), farm_id: "main" } : null;
-  } catch {
-    const { data } = await sb
+  const full = await sb
+    .from("tasks")
+    .update({
+      due_at: input.due_at,
+      status: "snoozed",
+      snooze_reason: input.reason ?? null,
+    })
+    .eq("id", input.task_id)
+    .select()
+    .single();
+  if (full.error) {
+    console.warn("[snoozeTask] full update failed, falling back:", full.error.message);
+    const minimal = await sb
       .from("tasks")
       .update({ due_at: input.due_at })
       .eq("id", input.task_id)
       .select()
       .single();
-    return data ? { ...(data as Task), farm_id: "main" } : null;
+    return minimal.data ? { ...(minimal.data as Task), farm_id: "main" } : null;
   }
+  return full.data ? { ...(full.data as Task), farm_id: "main" } : null;
 }
 
 /** 문제 발견 — issue_type 저장 + status issue_found. */
@@ -346,22 +349,22 @@ export async function markIssueTask(input: IssueTaskInput): Promise<Task | null>
     if (input.memo) t.memo = input.memo;
     return t;
   }
-  try {
-    const { data } = await sb
-      .from("tasks")
-      .update({
-        status: "issue_found",
-        result_status: "issue_found",
-        issue_type: input.issue_type,
-        memo: input.memo ?? null,
-      })
-      .eq("id", input.task_id)
-      .select()
-      .single();
-    return data ? { ...(data as Task), farm_id: "main" } : null;
-  } catch {
+  const result = await sb
+    .from("tasks")
+    .update({
+      status: "issue_found",
+      result_status: "issue_found",
+      issue_type: input.issue_type,
+      memo: input.memo ?? null,
+    })
+    .eq("id", input.task_id)
+    .select()
+    .single();
+  if (result.error) {
+    console.warn("[markIssueTask] update failed:", result.error.message);
     return null;
   }
+  return result.data ? { ...(result.data as Task), farm_id: "main" } : null;
 }
 
 /** 자동 followup task 생성 — 룰 기반 (방제→7일, 수확→2일, 등). */
@@ -399,8 +402,22 @@ export async function createFollowupTask(input: {
   if (!farmRow) return null;
 
   let nextTaskId: string | null = null;
-  try {
-    const { data } = await sb
+  const full = await sb
+    .from("tasks")
+    .insert({
+      farm_id: farmRow,
+      crop_id: input.crop_id,
+      title: input.title,
+      priority: "mid",
+      due_at: input.due_at,
+      task_kind: input.rule_kind,
+      status: "pending",
+    })
+    .select()
+    .single();
+  if (full.error) {
+    console.warn("[createFollowupTask] full insert failed, falling back:", full.error.message);
+    const minimal = await sb
       .from("tasks")
       .insert({
         farm_id: farmRow,
@@ -408,37 +425,24 @@ export async function createFollowupTask(input: {
         title: input.title,
         priority: "mid",
         due_at: input.due_at,
-        task_kind: input.rule_kind,
-        status: "pending",
       })
       .select()
       .single();
-    nextTaskId = data?.id ?? null;
-  } catch {
-    const { data } = await sb
-      .from("tasks")
-      .insert({
-        farm_id: farmRow,
-        crop_id: input.crop_id,
-        title: input.title,
-        priority: "mid",
-        due_at: input.due_at,
-      })
-      .select()
-      .single();
-    nextTaskId = data?.id ?? null;
+    nextTaskId = minimal.data?.id ?? null;
+  } else {
+    nextTaskId = full.data?.id ?? null;
   }
 
   if (nextTaskId) {
-    try {
-      await sb.from("task_followups").insert({
-        source_task_id: input.source_task_id,
-        next_task_id: nextTaskId,
-        rule_kind: input.rule_kind,
-        rule_days: input.rule_days,
-      });
-    } catch {
-      /* task_followups 미생성 — 무시 */
+    const fu = await sb.from("task_followups").insert({
+      source_task_id: input.source_task_id,
+      next_task_id: nextTaskId,
+      rule_kind: input.rule_kind,
+      rule_days: input.rule_days,
+    });
+    if (fu.error) {
+      console.warn("[createFollowupTask] task_followups insert failed:", fu.error.message);
+      /* 테이블 미생성 — 무시 */
     }
   }
 
