@@ -1,10 +1,14 @@
 import * as React from "react";
 
-type IconProps = React.SVGProps<SVGSVGElement> & {
+type IconProps = {
   size?: number;
   stroke?: number;
   fill?: string;
   color?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  "aria-label"?: string;
+  onClick?: React.MouseEventHandler<SVGSVGElement>;
 };
 
 const Icon = ({
@@ -77,7 +81,7 @@ export const IconFilter = (p: IconProps) => (
   </Icon>
 );
 
-export const IconLeaf = ({ size = 22, ...p }: IconProps) => (
+export const IconLeaf = ({ size = 22, stroke, fill, color, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...p}>
     <path
       d="M4 18C4 11 9 5 19 5c0 9-5 14-12 14-1.5 0-3-.3-3-.3"
@@ -91,13 +95,13 @@ export const IconLeaf = ({ size = 22, ...p }: IconProps) => (
   </svg>
 );
 
-export const IconDrop = ({ size = 22, color = "#5A8BB5", ...p }: IconProps) => (
+export const IconDrop = ({ size = 22, color = "#5A8BB5", stroke, fill, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} {...p}>
     <path d="M12 3.5c0 0 7 7.5 7 12.5a7 7 0 1 1-14 0c0-5 7-12.5 7-12.5z" />
   </svg>
 );
 
-export const IconWind = ({ size = 22, color = "#6B7A6F", ...p }: IconProps) => (
+export const IconWind = ({ size = 22, color = "#6B7A6F", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -115,7 +119,7 @@ export const IconWind = ({ size = 22, color = "#6B7A6F", ...p }: IconProps) => (
   </svg>
 );
 
-export const IconSun = ({ size = 28, ...p }: IconProps) => (
+export const IconSun = ({ size = 28, stroke, fill, color, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 40 40" fill="none" {...p}>
     <g className="sun-rays">
       <circle cx="20" cy="20" r="8" fill="#F0B441" />
@@ -232,7 +236,7 @@ export const IconSnow = ({ size = 56 }: { size?: number }) => (
   </svg>
 );
 
-export const IconUmbrella = ({ size = 22, color = "#5A8BB5", ...p }: IconProps) => (
+export const IconUmbrella = ({ size = 22, color = "#5A8BB5", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -250,7 +254,7 @@ export const IconUmbrella = ({ size = 22, color = "#5A8BB5", ...p }: IconProps) 
   </svg>
 );
 
-export const IconUV = ({ size = 22, color = "#E89B3C", ...p }: IconProps) => (
+export const IconUV = ({ size = 22, color = "#E89B3C", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -274,7 +278,7 @@ export const IconUV = ({ size = 22, color = "#E89B3C", ...p }: IconProps) => (
   </svg>
 );
 
-export const IconDust = ({ size = 22, color = "#6B7A6F", ...p }: IconProps) => (
+export const IconDust = ({ size = 22, color = "#6B7A6F", stroke, fill, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} {...p}>
     <circle cx="6" cy="6" r="1.5" />
     <circle cx="12" cy="4" r="1.5" />
@@ -288,7 +292,7 @@ export const IconDust = ({ size = 22, color = "#6B7A6F", ...p }: IconProps) => (
   </svg>
 );
 
-export const IconSunrise = ({ size = 22, color = "#E89B3C", ...p }: IconProps) => (
+export const IconSunrise = ({ size = 22, color = "#E89B3C", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -309,7 +313,7 @@ export const IconSunrise = ({ size = 22, color = "#E89B3C", ...p }: IconProps) =
   </svg>
 );
 
-export const IconSunset = ({ size = 22, color = "#C77A26", ...p }: IconProps) => (
+export const IconSunset = ({ size = 22, color = "#C77A26", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -330,7 +334,7 @@ export const IconSunset = ({ size = 22, color = "#C77A26", ...p }: IconProps) =>
   </svg>
 );
 
-export const IconShield = ({ size = 22, color = "#3A7C58", ...p }: IconProps) => (
+export const IconShield = ({ size = 22, color = "#3A7C58", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -346,7 +350,7 @@ export const IconShield = ({ size = 22, color = "#3A7C58", ...p }: IconProps) =>
   </svg>
 );
 
-export const IconClipboard = ({ size = 22, color = "#FFFFFF", ...p }: IconProps) => (
+export const IconClipboard = ({ size = 22, color = "#FFFFFF", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -365,7 +369,7 @@ export const IconClipboard = ({ size = 22, color = "#FFFFFF", ...p }: IconProps)
   </svg>
 );
 
-export const IconCheck = ({ size = 18, color = "#FFFFFF", stroke = 3, ...p }: IconProps) => (
+export const IconCheck = ({ size = 18, color = "#FFFFFF", stroke = 3, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -381,7 +385,7 @@ export const IconCheck = ({ size = 18, color = "#FFFFFF", stroke = 3, ...p }: Ic
   </svg>
 );
 
-export const IconClock = ({ size = 18, color = "currentColor", ...p }: IconProps) => (
+export const IconClock = ({ size = 18, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -398,7 +402,7 @@ export const IconClock = ({ size = 18, color = "currentColor", ...p }: IconProps
   </svg>
 );
 
-export const IconBell = ({ size = 18, color = "currentColor", ...p }: IconProps) => (
+export const IconBell = ({ size = 18, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -415,7 +419,7 @@ export const IconBell = ({ size = 18, color = "currentColor", ...p }: IconProps)
   </svg>
 );
 
-export const IconArrowUp = ({ size = 14, color = "currentColor", ...p }: IconProps) => (
+export const IconArrowUp = ({ size = 14, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -432,7 +436,7 @@ export const IconArrowUp = ({ size = 14, color = "currentColor", ...p }: IconPro
   </svg>
 );
 
-export const IconSparkle = ({ size = 18, color = "currentColor", ...p }: IconProps) => (
+export const IconSparkle = ({ size = 18, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} {...p}>
     <path d="M12 3l1.5 5L18 9.5 13.5 11 12 16l-1.5-5L6 9.5 10.5 8z" />
     <circle cx="19" cy="5" r="1" />
@@ -440,7 +444,7 @@ export const IconSparkle = ({ size = 18, color = "currentColor", ...p }: IconPro
   </svg>
 );
 
-export const IconBot = ({ size = 28, color = "#FFFFFF", ...p }: IconProps) => (
+export const IconBot = ({ size = 28, color = "#FFFFFF", stroke, fill, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none" {...p}>
     <rect x="6" y="9" width="20" height="16" rx="6" fill={color} fillOpacity="0.95" />
     <circle cx="12" cy="17" r="2" fill="#1F4D3A" />
@@ -454,13 +458,13 @@ export const IconBot = ({ size = 28, color = "#FFFFFF", ...p }: IconProps) => (
   </svg>
 );
 
-export const IconSend = ({ size = 18, color = "#FFFFFF", ...p }: IconProps) => (
+export const IconSend = ({ size = 18, color = "#FFFFFF", stroke, fill, ...p }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} {...p}>
     <path d="M3 11.5L21 4l-7 18-2.5-8L3 11.5z" />
   </svg>
 );
 
-export const IconPlus = ({ size = 22, color = "currentColor", ...p }: IconProps) => (
+export const IconPlus = ({ size = 22, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -476,7 +480,7 @@ export const IconPlus = ({ size = 22, color = "currentColor", ...p }: IconProps)
   </svg>
 );
 
-export const IconChat = ({ size = 24, color = "currentColor", ...p }: IconProps) => (
+export const IconChat = ({ size = 24, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -496,7 +500,7 @@ export const IconChat = ({ size = 24, color = "currentColor", ...p }: IconProps)
   </svg>
 );
 
-export const IconList = ({ size = 24, color = "currentColor", ...p }: IconProps) => (
+export const IconList = ({ size = 24, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -518,7 +522,7 @@ export const IconList = ({ size = 24, color = "currentColor", ...p }: IconProps)
 );
 
 /** 할 일 탭 — 체크박스가 있는 클립보드 (의미 더 명확) */
-export const IconChecklist = ({ size = 24, color = "currentColor", ...p }: IconProps) => (
+export const IconChecklist = ({ size = 24, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -540,7 +544,7 @@ export const IconChecklist = ({ size = 24, color = "currentColor", ...p }: IconP
 );
 
 /** AI 상담 탭 — 챗 버블 + 스파클 */
-export const IconChatBot = ({ size = 24, color = "currentColor", ...p }: IconProps) => (
+export const IconChatBot = ({ size = 24, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -559,7 +563,7 @@ export const IconChatBot = ({ size = 24, color = "currentColor", ...p }: IconPro
   </svg>
 );
 
-export const IconCalendar = ({ size = 24, color = "currentColor", ...p }: IconProps) => (
+export const IconCalendar = ({ size = 24, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}
@@ -578,7 +582,7 @@ export const IconCalendar = ({ size = 24, color = "currentColor", ...p }: IconPr
   </svg>
 );
 
-export const IconCloudSun = ({ size = 24, color = "currentColor", ...p }: IconProps) => (
+export const IconCloudSun = ({ size = 24, color = "currentColor", stroke, fill, ...p }: IconProps) => (
   <svg
     width={size}
     height={size}

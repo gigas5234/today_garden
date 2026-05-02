@@ -59,11 +59,9 @@ async function resolveFarmRowId(farm_id: FarmId): Promise<string | null> {
   return data?.id ?? null;
 }
 
-async function farmIdFromRow(rowId: string): Promise<FarmId> {
-  const sb = getServerSupabase();
-  if (!sb) return "ypg";
-  const { data } = await sb.from("farms").select("slug").eq("id", rowId).single();
-  return ((data?.slug as FarmId) ?? "ypg") as FarmId;
+// 단일 밭 모드 — 모든 row 는 "main" 으로 매핑
+function farmIdFromRow(_rowId: string): FarmId {
+  return "main";
 }
 
 /* ──────────────── tasks ──────────────── */
@@ -81,12 +79,10 @@ export async function listTasks(farm_id: FarmId): Promise<Task[]> {
     .order("priority")
     .order("created_at");
   if (error) throw error;
-  return await Promise.all(
-    (data ?? []).map(async (r) => ({
-      ...r,
-      farm_id: await farmIdFromRow(r.farm_id),
-    })) as Task[]
-  );
+  return (data ?? []).map((r) => ({
+    ...r,
+    farm_id: farmIdFromRow(r.farm_id),
+  })) as Task[];
 }
 
 export async function createTask(input: {
