@@ -135,18 +135,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 56px 20px 110px;
+  padding: 20px 20px 110px;
   scroll-behavior: smooth;
   position: relative;
 }
 .screen::-webkit-scrollbar { display: none; }
 
-/* Status bar (faux) */
+/* (status-bar 제거됨 — 실제 OS 상태 표시줄 사용) */
 .status-bar {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 44px;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: space-between;
   padding: 14px 28px 0;
@@ -639,15 +636,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 0;
 }
 .metric {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 12px;
-  background: rgba(255, 252, 244, 0.6);
+  padding: 14px 14px;
+  background: var(--card);
+  border: 1px solid var(--line-soft);
   border-radius: 14px;
+  box-shadow: var(--shadow-sm);
 }
 .metric .m-label { font-size: 13px; color: var(--ink-500); font-weight: 500; }
 .metric .m-value { font-size: var(--t-md); font-weight: 700; color: var(--ink-900); }
@@ -831,62 +830,64 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   flex-shrink: 0;
 }
 
-/* Weather hero (on 날씨 screen) */
+/* Weather hero — 풀블리드 배너 (좌우 화면 끝까지 일러스트, 그 위에 텍스트 오버레이) */
 .weather-hero {
-  background:
-    linear-gradient(180deg, rgba(255,252,244,0) 0%, rgba(255,252,244,0.6) 60%, rgba(255,252,244,0.95) 100%),
-    linear-gradient(135deg, #DDE9D2 0%, #C8DDC4 60%, #A9C5B0 100%);
-  border-radius: var(--r-xl);
-  padding: 22px 22px 20px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--line-soft);
-}
-.weather-hero .hero-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  position: relative;
-  z-index: 2;
-}
-.weather-hero .h-cap { font-size: var(--t-md); font-weight: 700; color: var(--ink-700); margin-bottom: 4px; }
-.weather-hero .h-temp { font-size: var(--t-hero); font-weight: 800; color: var(--ink-900); line-height: 1; letter-spacing: -0.04em; }
-.weather-hero .h-feel { font-size: var(--t-sm); font-weight: 600; color: var(--ink-500); margin-top: 8px; }
-
-/* SVG landscape decoration */
-.hero-deco {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* Photo hero (field-5.png) — 우측 영역 사진 그대로, 좌측 텍스트 영역은 깨끗 */
-.weather-hero.hero-photo {
-  background: var(--card);
+  /* .screen padding 20px 을 음수마진으로 빠져나가 좌우 풀폭 차지 */
+  margin: -20px -20px 18px;
+  /* 16:9 비율 + 최소 240, 최대 320 */
+  height: clamp(240px, 56vw, 320px);
 }
 .weather-hero .hero-photo-bg {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 50%;
-  background-image: url("/illustrations/field-5.png");
+  inset: 0;
+  background-image: url("/illustrations/field-6.png");
   background-size: cover;
-  background-position: center;
+  background-position: center 55%;
   z-index: 0;
   pointer-events: none;
 }
-/* 텍스트·메트릭은 사진 위 */
-.weather-hero.hero-photo > *:not(.hero-photo-bg) {
-  position: relative;
-  z-index: 2;
+/* 텍스트 가독성용 하단 그라디언트 오버레이 */
+.weather-hero .hero-photo-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.05) 45%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
 }
-/* 메트릭 그리드 배경 — 사진 위에서도 또렷하게 */
-.weather-hero.hero-photo .metric {
-  background: rgba(255, 252, 244, 0.92);
+.weather-hero .hero-row {
+  position: absolute;
+  inset: auto 20px 18px 20px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  color: white;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+.weather-hero .h-cap {
+  font-size: var(--t-md);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  margin-bottom: 4px;
+}
+.weather-hero .h-temp {
+  font-size: var(--t-hero);
+  font-weight: 800;
+  color: white;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.weather-hero .h-feel {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 8px;
 }
 
 /* Sun spin */

@@ -103,25 +103,21 @@ export default function WeatherPage() {
         날씨 <IconLeaf size={28} />
       </h1>
 
-      <div className="weather-hero fade-up hero-photo">
-        {/* 우측 일러스트 (field-5.png) — 좌측은 텍스트 영역 깨끗하게 유지 */}
+      {/* 풀블리드 hero — field-6.png 가 화면 좌우 끝까지, 텍스트는 하단 좌측 오버레이 */}
+      <div className="weather-hero fade-up">
         <div className="hero-photo-bg" />
-
         <div className="hero-row">
-          <div className="float" style={{ flexShrink: 0 }}>
-            {cur ? <WeatherIcon kind={cur.sky} size={96} /> : <IconSunCloud size={96} />}
-          </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="h-cap">{cur ? SKY_LABEL[cur.sky] ?? "—" : "—"}</div>
             <div
               className="h-temp"
               style={
                 tempLevel === "danger"
-                  ? { color: "#B92020" }
+                  ? { color: "#FFB1A8" }
                   : tempLevel === "cool"
-                    ? { color: "#2965A3" }
+                    ? { color: "#9BC4E5" }
                     : tempLevel === "warn"
-                      ? { color: "var(--orange-700)" }
+                      ? { color: "#F7B97A" }
                       : undefined
               }
             >
@@ -131,64 +127,66 @@ export default function WeatherPage() {
               className="h-feel"
               style={
                 tempLevel === "danger" || tempLevel === "warn"
-                  ? { color: "var(--orange-700)", fontWeight: 700 }
+                  ? { color: "#F7B97A", fontWeight: 700 }
                   : tempLevel === "cool"
-                    ? { color: "#2965A3", fontWeight: 700 }
+                    ? { color: "#9BC4E5", fontWeight: 700 }
                     : undefined
               }
             >
               체감 {cur?.feelsLike ?? "—"}°
             </div>
           </div>
+          <div className="float" style={{ flexShrink: 0, paddingBottom: 6 }}>
+            {cur ? <WeatherIcon kind={cur.sky} size={84} /> : <IconSunCloud size={84} />}
+          </div>
         </div>
+      </div>
 
-        <div className="metric-grid">
-          <div className={"metric" + (humidLevel ? " " + humidLevel : "")}>
-            <IconDrop size={26} color="#5A8BB5" />
-            <div>
-              <div className="m-label">습도</div>
-              <div className="m-value">{cur?.humidity ?? "—"}%</div>
+      {/* 메트릭 6타일 — hero 밖 카드 */}
+      <div className="metric-grid">
+        <div className={"metric" + (humidLevel ? " " + humidLevel : "")}>
+          <IconDrop size={26} color="#5A8BB5" />
+          <div>
+            <div className="m-label">습도</div>
+            <div className="m-value">{cur?.humidity ?? "—"}%</div>
+          </div>
+        </div>
+        <div className={"metric" + (popLevel ? " " + popLevel : "")}>
+          <IconUmbrella size={26} />
+          <div>
+            <div className="m-label">강수확률</div>
+            <div className="m-value">{cur?.pop ?? "—"}%</div>
+          </div>
+        </div>
+        <div className={"metric" + (windLevel ? " " + windLevel : "")}>
+          <IconWind size={26} />
+          <div>
+            <div className="m-label">풍속</div>
+            <div className="m-value">{cur?.windSpeed ?? "—"} m/s</div>
+          </div>
+        </div>
+        <div className={"metric" + (uvLevel ? " " + uvLevel : "")}>
+          <IconUV size={26} />
+          <div>
+            <div className="m-label">자외선 (UV)</div>
+            <div className="m-value">
+              {cur ? `${cur.uv} (${cur.uvLabel})` : "—"}
             </div>
           </div>
-          <div className={"metric" + (popLevel ? " " + popLevel : "")}>
-            <IconUmbrella size={26} />
-            <div>
-              <div className="m-label">강수확률</div>
-              <div className="m-value">{cur?.pop ?? "—"}%</div>
-            </div>
+        </div>
+        <div className={"metric" + (pmLevel ? " " + pmLevel : "")}>
+          <IconDust size={26} />
+          <div>
+            <div className="m-label">미세먼지</div>
+            <div className="m-value">{cur?.pm10Label ?? "—"}</div>
           </div>
-          <div className={"metric" + (windLevel ? " " + windLevel : "")}>
-            <IconWind size={26} />
-            <div>
-              <div className="m-label">풍속</div>
-              <div className="m-value">{cur?.windSpeed ?? "—"} m/s</div>
-            </div>
-          </div>
-          <div className={"metric" + (uvLevel ? " " + uvLevel : "")}>
-            <IconUV size={26} />
-            <div>
-              <div className="m-label">자외선 (UV)</div>
-              <div className="m-value">
-                {cur ? `${cur.uv} (${cur.uvLabel})` : "—"}
-              </div>
-            </div>
-          </div>
-          <div className={"metric" + (pmLevel ? " " + pmLevel : "")}>
-            <IconDust size={26} />
-            <div>
-              <div className="m-label">미세먼지</div>
-              <div className="m-value">{cur?.pm10Label ?? "—"}</div>
-            </div>
-          </div>
-          <div className="metric">
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <IconSunrise size={20} />
-            </div>
-            <div>
-              <div className="m-label">일출 / 일몰</div>
-              <div className="m-value" style={{ fontSize: 15 }}>
-                {cur ? `${cur.sunrise} · ${cur.sunset}` : "—"}
-              </div>
+        </div>
+        <div className="metric">
+          <IconSunrise size={20} />
+          <div>
+            <div className="m-label">일출 / 일몰</div>
+            <div className="m-value" style={{ fontSize: 15 }}>
+              {cur ? `${cur.sunrise} · ${cur.sunset}` : "—"}
             </div>
           </div>
         </div>
